@@ -1,5 +1,8 @@
 use std::ffi::CString;
 use std::sync::atomic::{AtomicBool, Ordering};
+#[cfg(feature = "v0_8_8")]
+#[cfg_attr(docsrs, doc(cfg(feature = "v0_8_8")))]
+use glib::translate::{from_glib, ToGlibPtr};
 
 mod buffer;
 pub use self::buffer::*;
@@ -65,6 +68,22 @@ impl Aravis {
 	pub fn get_device_list(&self) -> Vec<DeviceInfo> {
 		unsafe { get_device_list() }
 	}
+
+	#[cfg(feature = "v0_8_8")]
+	#[cfg_attr(docsrs, doc(cfg(feature = "v0_8_8")))]
+	/// Configures the debug output using a configuration string consisting
+	/// of a comma separated list of debug categories or category/debug level pair.
+	/// This function overwrites the configuration done by ARV_DEBUG environment variable.
+	/// For example, enabling debug level 3 of the gvcp category and default debug
+	/// level of category genicam is done using:
+	///
+	/// ```
+	/// # let aravis = aravis::Aravis::initialize().unwrap();
+	/// aravis.debug_enable("gvcp:3,genicam");
+	/// ```
+	pub fn debug_enable(&self, category_selection: &str) -> bool {
+		unsafe { debug_enable(category_selection) }
+	}
 }
 
 /// Enumerate all available GenICam devices without mutual exclusion.
@@ -88,6 +107,23 @@ pub unsafe fn get_device_list() -> Vec<DeviceInfo> {
 			address: std::ffi::CStr::from_ptr(aravis_sys::arv_get_device_address(i)).into(),
 		})
 		.collect()
+}
+
+#[cfg(feature = "v0_8_8")]
+#[cfg_attr(docsrs, doc(cfg(feature = "v0_8_8")))]
+/// Configures the debug output using a configuration string consisting
+/// of a comma separated list of debug categories or category/debug level pair.
+/// This function overwrites the configuration done by ARV_DEBUG environment variable.
+///
+/// # Safety
+/// This function is unsafe because it accesses global state of the Aravis library,
+/// without guarantee that this thread is the only one accessing it.
+///
+/// See [`Aravis::debug_enable`] for a safe alternative.
+pub unsafe fn debug_enable(category_selection: &str) -> bool {
+	from_glib(aravis_sys::arv_debug_enable(
+		category_selection.to_glib_none().0,
+	))
 }
 
 impl std::fmt::Display for AlreadyInitializedError {
